@@ -16,6 +16,12 @@ cd /Users/longmorebiz/Desktop/ChristianAppEmpire/proverbs-31-organizer-main/expo
 npm install --legacy-peer-deps
 ```
 
+`react-native-iap` requires **`react-native-nitro-modules`** (peer dependency). It is listed in `package.json`; if `pod install` fails with `Unable to find a specification for NitroModules`, run:
+
+```bash
+npm install --legacy-peer-deps react-native-nitro-modules@^0.35.0
+```
+
 ## 2. Generate the iOS project
 
 ```bash
@@ -30,7 +36,7 @@ This creates the `ios/` folder with AdMob, ATT, and notification entitlements fr
 open ios/Proverbs31.xcworkspace
 ```
 
-(If the workspace name differs, open the `.xcworkspace` file inside `ios/`.)
+**Important:** Always open the **`.xcworkspace`** file (inside `ios/`), not the `.xcodeproj`. CocoaPods creates the workspace after a successful `pod install`.
 
 ## 4. Signing
 
