@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Expo / React Native (expo subfolder)
+expo/node_modules/
+expo/.expo/
+expo/dist/
+expo/web-build/
+expo/ios/
+expo/android/
+expo/expo-env.d.ts
+expo/.env
+expo/.env*.local
+
+# OS
+.DS_Store
+
+# Secrets
+*.p8
+*.p12
+*.jks
+*.mobileprovision
+.env
