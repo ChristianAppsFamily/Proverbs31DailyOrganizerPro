@@ -1,16 +1,28 @@
-/**
- * Privacy policy hosted on GitHub Pages.
- * After publishing, replace YOUR_GITHUB_USERNAME and repo name if different.
- */
-export const PRIVACY_POLICY_URL =
-  "https://longmorebiz.github.io/proverbs-31-organizer-main/privacy-policy/";
+import { ANDROID_PACKAGE, APP_STORE_APPLE_ID } from "@/constants/appStore";
 
-/** App Store product — update when live in App Store Connect. */
-export const IOS_APP_STORE_URL =
-  "https://apps.apple.com/app/id0000000000";
+/** PRO App Store listing (Apple ID 1063672528). */
+export const IOS_APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_APPLE_ID}`;
 
+export const IOS_APP_STORE_REVIEW_URL = `${IOS_APP_STORE_URL}?action=write-review`;
+
+/** Android package — Proverbs31OrganizerPro (com.christianappempire.p31organizerpro). */
 export const ANDROID_PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=app.rork.au728cqyl2zvkiuezh60i";
+  `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
 
-/** In-App Purchase product id (configure in App Store Connect). */
-export const PREMIUM_PRODUCT_ID = "proverbs31_premium";
+/** Christian App Empire developer page on the App Store. */
+export const MORE_APPS_URL =
+  "https://apps.apple.com/us/developer/christian-app-empire-llc/id787763898";
+
+export const JOIN_COMMUNITY_URL = "https://proverbs31way.com";
+
+export const FACEBOOK_URL = "https://www.facebook.com/Proverbs31Ways/";
+
+export const INSTAGRAM_URL = "https://www.instagram.com/Proverbs31Devotionals";
+
+export const CONTACT_US_EMAIL = "ChristianAppEmpire@gmail.com";
+
+export const CONTACT_US_URL = `mailto:${CONTACT_US_EMAIL}`;
+
+/** Hosted on GitHub Pages (ChristianAppsFamily/Proverbs31DailyOrganizerPro). */
+export const PRIVACY_POLICY_URL =
+  "https://christianappsfamily.github.io/Proverbs31DailyOrganizerPro/privacy-policy/";

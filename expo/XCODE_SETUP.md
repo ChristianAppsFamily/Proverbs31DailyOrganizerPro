@@ -1,6 +1,16 @@
 # Xcode local testing (physical iPhone)
 
-This app uses **native modules** (AdMob, ATT, notifications, in-app purchases). You must use a **development build** — Expo Go will not work.
+**PRO build (Proverbs31OrganizerPro):** Display name **Proverbs 31: Daily Organizer Pro** · version **1.1** · bundle `com.christianappempire.p31organizerpro` · Apple ID **1063672528** · SKU **P31OrganizePro**
+
+This app uses **native modules** (notifications). You must use a **development build** — Expo Go will not work.
+
+No ads or App Tracking Transparency in this build.
+
+After changing `app.config.js` or icons, regenerate native code:
+
+```bash
+npm run prebuild:ios
+```
 
 ## Prerequisites
 
@@ -12,14 +22,8 @@ This app uses **native modules** (AdMob, ATT, notifications, in-app purchases). 
 ## 1. Install dependencies
 
 ```bash
-cd /Users/longmorebiz/Desktop/ChristianAppEmpire/proverbs-31-organizer-main/expo
+cd expo
 npm install --legacy-peer-deps
-```
-
-`react-native-iap` requires **`react-native-nitro-modules`** (peer dependency). It is listed in `package.json`; if `pod install` fails with `Unable to find a specification for NitroModules`, run:
-
-```bash
-npm install --legacy-peer-deps react-native-nitro-modules@^0.35.0
 ```
 
 ## 2. Generate the iOS project
@@ -28,56 +32,38 @@ npm install --legacy-peer-deps react-native-nitro-modules@^0.35.0
 npx expo prebuild --platform ios --clean
 ```
 
-This creates the `ios/` folder with AdMob, ATT, and notification entitlements from `app.config.js`.
+This creates the `ios/` folder with notification entitlements from `app.config.js`.
 
 ## 3. Open in Xcode
 
 ```bash
-open ios/Proverbs31.xcworkspace
+open ios/Proverbs31DailyOrganizerPro.xcworkspace
 ```
 
-**Important:** Always open the **`.xcworkspace`** file (inside `ios/`), not the `.xcodeproj`. CocoaPods creates the workspace after a successful `pod install`.
+**Important:** Always open the **`.xcworkspace`** file (inside `ios/`), not the `.xcodeproj`. The name users see on the home screen is **Proverbs 31: Daily Organizer Pro**.
 
 ## 4. Signing
 
+If Xcode shows **“Signing requires a development team”**:
+
 1. Select the app target in Xcode.
-2. **Signing & Capabilities** → choose your Team.
-3. Set a unique **Bundle Identifier** if needed (default: `app.rork.au728cqyl2zvkiuezh60i`).
+2. Open **Signing & Capabilities**.
+3. Check **Automatically manage signing**.
+4. Choose your **Team** (Apple ID / developer account).
+5. Confirm **Bundle Identifier** is `com.christianappempire.p31organizerpro`.
+
+Without a team, the app cannot run on a physical iPhone or be archived for TestFlight/App Store.
+
+- **Version** 1.1 · **Build** must be higher than the build on App Store Connect (configured as `2` in `app.config.js` — bump if yours is already ≥ 2).
 
 ## 5. Run on your phone
 
 1. Select your iPhone as the run destination.
 2. Press **Run** (⌘R).
-3. On first launch: splash → **ATT prompt** → ads load → banner at bottom of screens.
+3. On first launch: splash → main UI → optional notification permission on the Tasks tab.
 
-## Ad unit IDs
+After changing `assets/images/splash.png` or `icon.png`, run `npm run prebuild:ios` so Xcode picks up new assets.
 
-| Platform | App ID | Banner |
-|----------|--------|--------|
-| iOS | `ca-app-pub-3002325591150738~8603205607` | `ca-app-pub-3002325591150738/2556672005` |
-| Android | `ca-app-pub-3002325591150738~9800737201` | `ca-app-pub-3002325591150738/3754203607` |
+## Store metadata
 
-- **Debug** (`__DEV__`): Google test banner units (safe for development).
-- **Release / Archive**: your production banner IDs. Set `EXPO_PUBLIC_USE_PRODUCTION_ADS=true` in the Xcode scheme or EAS production profile.
-
-## App Store Connect (Pro purchase)
-
-1. Create an in-app purchase product: `proverbs31_premium`
-2. Rebuild after adding the product.
-3. Use a **Sandbox** Apple ID on device to test purchases.
-
-## Privacy policy (GitHub Pages)
-
-Published from `docs/privacy-policy/index.html` in the repo root. Enable **GitHub Pages** → source: `main` branch → folder `/docs`.
-
-Update `constants/urls.ts` if your GitHub username or repo name differs.
-
-## Useful commands
-
-```bash
-# Run on connected device from CLI
-npx expo run:ios --device
-
-# Production archive (after configuring signing)
-# Product → Archive in Xcode
-```
+Constants live in `constants/appStore.ts`. App Store / review URLs use Apple ID **1063672528** via `constants/urls.ts`.

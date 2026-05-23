@@ -1,33 +1,30 @@
 /** @type {import('expo/config').ExpoConfig} */
-const ADMOB_APP_IDS = {
-  ios: "ca-app-pub-3002325591150738~8603205607",
-  android: "ca-app-pub-3002325591150738~9800737201",
-};
-
-const ATT_MESSAGE =
-  "Proverbs 31 uses this identifier to show relevant ads and support the free version of the app.";
+const APP_DISPLAY_NAME = "Proverbs 31: Daily Organizer Pro";
+const APP_VERSION = "1.1";
+const IOS_BUNDLE_ID = "com.christianappempire.p31organizerpro";
+const ANDROID_PACKAGE = "com.christianappempire.p31organizerpro";
 
 module.exports = {
   expo: {
-    name: "Proverbs 31",
-    slug: "au728cqyl2zvkiuezh60i",
-    version: "1.0.0",
+    name: APP_DISPLAY_NAME,
+    slug: "p31-organizer-pro",
+    version: APP_VERSION,
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "rork-app",
+    scheme: "p31organizerpro",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
-      image: "./assets/images/splash-icon.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff",
+      image: "./assets/images/splash.png",
+      resizeMode: "cover",
+      backgroundColor: "#1a1a1a",
     },
     ios: {
       supportsTablet: false,
-      bundleIdentifier: "app.rork.au728cqyl2zvkiuezh60i",
+      bundleIdentifier: IOS_BUNDLE_ID,
+      buildNumber: "2",
       infoPlist: {
-        NSUserTrackingUsageDescription: ATT_MESSAGE,
-        GADApplicationIdentifier: ADMOB_APP_IDS.ios,
+        CFBundleDisplayName: APP_DISPLAY_NAME,
         UIBackgroundModes: ["remote-notification"],
       },
     },
@@ -36,16 +33,23 @@ module.exports = {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff",
       },
-      package: "app.rork.au728cqyl2zvkiuezh60i",
-      permissions: [
-        "android.permission.POST_NOTIFICATIONS",
-        "com.google.android.gms.permission.AD_ID",
-      ],
+      package: ANDROID_PACKAGE,
+      versionCode: 2,
+      permissions: ["android.permission.POST_NOTIFICATIONS"],
     },
     web: {
       favicon: "./assets/images/favicon.png",
     },
     plugins: [
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/images/splash.png",
+          resizeMode: "cover",
+          backgroundColor: "#1a1a1a",
+          enableFullScreenImage_legacy: true,
+        },
+      ],
       "expo-dev-client",
       [
         "expo-router",
@@ -56,28 +60,13 @@ module.exports = {
       "expo-font",
       "expo-web-browser",
       [
-        "expo-tracking-transparency",
-        {
-          userTrackingPermission: ATT_MESSAGE,
-        },
-      ],
-      [
-        "react-native-google-mobile-ads",
-        {
-          androidAppId: ADMOB_APP_IDS.android,
-          iosAppId: ADMOB_APP_IDS.ios,
-          delayAppMeasurementInit: true,
-        },
-      ],
-      [
         "expo-notifications",
         {
           icon: "./assets/images/icon.png",
-          color: "#5B4B8A",
+          color: "#9E4A6E",
           sounds: [],
         },
       ],
-      "react-native-iap",
     ],
     experiments: {
       typedRoutes: true,
@@ -86,6 +75,9 @@ module.exports = {
       eas: {
         projectId: "proverbs-31-organizer",
       },
+      appProductId: "Proverbs31OrganizerPro",
+      appStoreAppleId: "1063672528",
+      appStoreSku: "P31OrganizePro",
     },
   },
 };

@@ -15,6 +15,9 @@ expo/.env*.local
 # OS
 .DS_Store
 
+# Local backups / reference copies
+Proverbs31Organizer_old/
+
 # Secrets
 *.p8
 *.p12

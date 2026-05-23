@@ -9,22 +9,13 @@
       "distribution": "internal",
       "ios": {
         "simulator": false
-      },
-      "env": {
-        "EXPO_PUBLIC_USE_PRODUCTION_ADS": "false"
       }
     },
     "preview": {
-      "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_USE_PRODUCTION_ADS": "true"
-      }
+      "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_USE_PRODUCTION_ADS": "true"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {

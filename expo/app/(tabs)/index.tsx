@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -7,111 +8,62 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Check, Clock, Plus } from "lucide-react-native";
+import Swipeable from "react-native-gesture-handler/Swipeable";
+import { Check, Plus, Trash2 } from "lucide-react-native";
 import { ScreenShell } from "@/components/ScreenShell";
-import { colors, fonts, radius } from "@/constants/theme";
-
-type Priority = "high" | "medium" | "low";
-
-type Task = {
-  id: string;
-  title: string;
-  time: string;
-  category: string;
-  priority: Priority;
-  recurring?: string;
-  done: boolean;
-};
+import { formatDisplayDate, greetingForHour } from "@/lib/dates";
+import { formatReminderLabel } from "@/lib/reminderDefaults";
+import { priorityColor, TASK_PRIORITY_COLORS } from "@/lib/priority";
+import { useAppStore } from "@/stores/appStore";
+import type { Task } from "@/types/models";
+import { fonts, radius } from "@/constants/theme";
+import type { AppColors } from "@/constants/themes";
+import { useAppTheme } from "@/contexts/ThemeContext";
+import { useHomeLaunchPermissions } from "@/hooks/useHomeLaunchPermissions";
+import { useThemedStyles } from "@/hooks/useThemedStyles";
 
 const CATEGORIES = ["All", "Household", "Work", "Ministry", "Self-Care"] as const;
 
-const TASKS: Task[] = [
-  {
-    id: "r1",
-    title: "Prepare dinner — salmon & rice",
-    time: "5:30 PM",
-    category: "Household",
-    priority: "high",
-    done: false,
-  },
-  {
-    id: "r2",
-    title: "Review quarterly budget report",
-    time: "2:00 PM",
-    category: "Work",
-    priority: "medium",
-    done: false,
-  },
-  {
-    id: "r3",
-    title: "Bible study prep — Romans 8",
-    time: "7:00 PM",
-    category: "Ministry",
-    priority: "low",
-    recurring: "Weekly",
-    done: false,
-  },
-  {
-    id: "c1",
-    title: "Morning devotional & prayer",
-    time: "6:00 AM",
-    category: "Self-Care",
-    priority: "high",
-    recurring: "Daily",
-    done: true,
-  },
-  {
-    id: "c2",
-    title: "School drop-off",
-    time: "7:45 AM",
-    category: "Household",
-    priority: "low",
-    recurring: "Daily",
-    done: true,
-  },
-];
-
-const PRIORITY_COLOR: Record<Priority, string> = {
-  high: colors.priorityHigh,
-  medium: colors.priorityMedium,
-  low: colors.priorityLow,
-};
-
-function formatToday(): string {
-  const d = new Date();
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
 export default function TasksScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+  useHomeLaunchPermissions();
   const router = useRouter();
+  const tasks = useAppStore((s) => s.tasks);
+  const toggleTaskDone = useAppStore((s) => s.toggleTaskDone);
+  const deleteTask = useAppStore((s) => s.deleteTask);
+  const openSwipeRef = useRef<Swipeable | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("All");
 
-  const remaining = useMemo(() => TASKS.filter((t) => !t.done), []);
-  const completed = useMemo(() => TASKS.filter((t) => t.done), []);
+  const filtered = useMemo(() => {
+    if (activeCategory === "All") return tasks;
+    return tasks.filter((t) => t.category === activeCategory);
+  }, [tasks, activeCategory]);
 
-  const progress = 0.62;
-  const doneCount = 5;
-  const totalCount = 8;
+  const remaining = useMemo(() => filtered.filter((t) => !t.done), [filtered]);
+  const completed = useMemo(() => filtered.filter((t) => t.done), [filtered]);
+
+  const totalCount = tasks.length;
+  const doneCount = tasks.filter((t) => t.done).length;
+  const progress = totalCount === 0 ? 0 : doneCount / totalCount;
 
   return (
     <ScreenShell>
       <View style={styles.dateRow}>
-        <Text style={styles.dateText}>{formatToday()}</Text>
-        <Text style={styles.greeting}>Good morning</Text>
+        <Text style={styles.dateText}>{formatDisplayDate(new Date().toISOString())}</Text>
+        <Text style={styles.greeting}>{greetingForHour()}</Text>
       </View>
 
-      <View style={styles.progressRow}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+      {totalCount > 0 ? (
+        <View style={styles.progressRow}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+          </View>
+          <Text style={styles.progressLabel}>
+            {doneCount} of {totalCount} done
+          </Text>
         </View>
-        <Text style={styles.progressLabel}>
-          {doneCount} of {totalCount} done
-        </Text>
-      </View>
+      ) : null}
 
       <ScrollView
         horizontal
@@ -136,30 +88,59 @@ export default function TasksScreen() {
         })}
       </ScrollView>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>REMAINING</Text>
-        <View style={styles.cardList}>
-          {remaining.map((t) => (
-            <TaskCard key={t.id} task={t} />
-          ))}
+      {totalCount === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>No tasks yet</Text>
+          <Text style={styles.emptyHint}>Tap Add task to create your first one.</Text>
         </View>
-      </View>
+      ) : (
+        <>
+          {remaining.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>REMAINING</Text>
+              <View style={styles.cardList}>
+                {remaining.map((t) => (
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    onToggle={() => toggleTaskDone(t.id)}
+                    onPress={() => router.push(`/add-item?id=${t.id}`)}
+                    onDelete={() => deleteTask(t.id)}
+                    openSwipeRef={openSwipeRef}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
 
-      <View style={styles.divider} />
+          {remaining.length > 0 && completed.length > 0 ? (
+            <View style={styles.divider} />
+          ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>COMPLETED</Text>
-        <View style={styles.cardList}>
-          {completed.map((t) => (
-            <TaskCard key={t.id} task={t} />
-          ))}
-        </View>
-      </View>
+          {completed.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>COMPLETED</Text>
+              <View style={styles.cardList}>
+                {completed.map((t) => (
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    onToggle={() => toggleTaskDone(t.id)}
+                    onPress={() => router.push(`/add-item?id=${t.id}`)}
+                    onDelete={() => deleteTask(t.id)}
+                    openSwipeRef={openSwipeRef}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </>
+      )}
 
       <View style={styles.legend}>
-        <LegendDot color={colors.priorityHigh} label="High" />
-        <LegendDot color={colors.priorityMedium} label="Medium" />
-        <LegendDot color={colors.priorityLow} label="Low" />
+        <LegendDot color={TASK_PRIORITY_COLORS.high} label="High" />
+        <LegendDot color={TASK_PRIORITY_COLORS.medium} label="Medium" />
+        <LegendDot color={TASK_PRIORITY_COLORS.low} label="Low" />
       </View>
 
       <Pressable
@@ -174,45 +155,109 @@ export default function TasksScreen() {
   );
 }
 
-function TaskCard({ task }: { task: Task }) {
-  return (
-    <View style={[styles.card, task.done && styles.cardDone]}>
-      <View
-        style={[
-          styles.checkbox,
-          task.done && styles.checkboxDone,
-        ]}
-      >
-        {task.done && <Check color={colors.white} size={12} strokeWidth={2.5} />}
-      </View>
+function TaskCard({
+  task,
+  onToggle,
+  onPress,
+  onDelete,
+  openSwipeRef,
+}: {
+  task: Task;
+  onToggle: () => void;
+  onPress: () => void;
+  onDelete: () => void;
+  openSwipeRef: React.MutableRefObject<Swipeable | null>;
+}) {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+  const swipeRef = useRef<Swipeable>(null);
 
-      <View style={styles.cardBody}>
-        <Text
-          style={[styles.taskTitle, task.done && styles.taskTitleDone]}
-          numberOfLines={2}
+  const confirmDelete = () => {
+    Alert.alert("Delete task?", `"${task.title}" will be removed.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          swipeRef.current?.close();
+          onDelete();
+        },
+      },
+    ]);
+  };
+
+  const renderRightActions = () => (
+    <Pressable style={styles.deleteAction} onPress={confirmDelete} testID={`delete-task-${task.id}`}>
+      <Trash2 color={colors.white} size={18} strokeWidth={2} />
+      <Text style={styles.deleteActionText}>Delete</Text>
+    </Pressable>
+  );
+
+  return (
+    <Swipeable
+      ref={swipeRef}
+      renderRightActions={renderRightActions}
+      overshootRight={false}
+      onSwipeableWillOpen={() => {
+        if (openSwipeRef.current && openSwipeRef.current !== swipeRef.current) {
+          openSwipeRef.current.close();
+        }
+        openSwipeRef.current = swipeRef.current;
+      }}
+      onSwipeableClose={() => {
+        if (openSwipeRef.current === swipeRef.current) {
+          openSwipeRef.current = null;
+        }
+      }}
+    >
+      <Pressable
+        style={[styles.card, task.done && styles.cardDone]}
+        onPress={onPress}
+      >
+        <Pressable
+          style={[styles.checkbox, task.done && styles.checkboxDone]}
+          onPress={onToggle}
+          hitSlop={8}
+          testID={`toggle-task-${task.id}`}
         >
-          {task.title}
-        </Text>
-        <View style={styles.metaRow}>
-          <Clock color={colors.textHint} size={10} strokeWidth={1.8} />
-          <Text style={styles.metaTime}>{task.time}</Text>
+          {task.done ? (
+            <Check color={colors.white} size={12} strokeWidth={2.5} />
+          ) : null}
+        </Pressable>
+
+        <View style={styles.cardBody}>
+          <Text
+            style={[styles.taskTitle, task.done && styles.taskTitleDone]}
+            numberOfLines={2}
+          >
+            {task.title}
+          </Text>
           <Text style={styles.metaCategory}>{task.category}</Text>
-          {task.recurring ? (
-            <View style={styles.recurringBadge}>
-              <Text style={styles.recurringText}>{task.recurring}</Text>
-            </View>
+          {task.remindOnDay && task.reminderAt ? (
+            <Text style={styles.metaReminder} numberOfLines={1}>
+              Reminder: {formatReminderLabel(task.reminderAt)}
+            </Text>
+          ) : null}
+          {task.notes ? (
+            <Text style={styles.metaNotes} numberOfLines={1}>
+              {task.notes}
+            </Text>
           ) : null}
         </View>
-      </View>
 
-      <View
-        style={[styles.priorityDot, { backgroundColor: PRIORITY_COLOR[task.priority] }]}
-      />
-    </View>
+        <View
+          style={[
+            styles.priorityDot,
+            { backgroundColor: priorityColor(task.priority, colors) },
+          ]}
+        />
+      </Pressable>
+    </Swipeable>
   );
 }
 
 function LegendDot({ color, label }: { color: string; label: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.legendItem}>
       <View style={[styles.legendDot, { backgroundColor: color }]} />
@@ -221,7 +266,8 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
   dateRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -289,6 +335,21 @@ const styles = StyleSheet.create({
   pillTextActive: {
     color: colors.white,
   },
+  empty: {
+    alignItems: "center",
+    paddingVertical: 32,
+    gap: 6,
+  },
+  emptyTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  emptyHint: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.textHint,
+  },
   section: {
     gap: 10,
   },
@@ -300,6 +361,21 @@ const styles = StyleSheet.create({
   },
   cardList: {
     gap: 8,
+  },
+  deleteAction: {
+    backgroundColor: colors.priorityHigh,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    borderRadius: 11,
+    marginLeft: 8,
+    gap: 4,
+  },
+  deleteActionText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: colors.white,
+    letterSpacing: 0.2,
   },
   card: {
     flexDirection: "row",
@@ -342,36 +418,21 @@ const styles = StyleSheet.create({
     color: colors.textHint,
     textDecorationLine: "line-through",
   },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  metaTime: {
-    fontFamily: fonts.body,
-    fontSize: 10,
-    color: colors.textHint,
-  },
   metaCategory: {
     fontFamily: fonts.body,
     fontSize: 9,
     color: colors.textHint,
     letterSpacing: 0.3,
-    marginLeft: 2,
   },
-  recurringBadge: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    marginLeft: 2,
-  },
-  recurringText: {
-    fontFamily: fonts.bodyMedium,
+  metaReminder: {
+    fontFamily: fonts.body,
     fontSize: 9,
     color: colors.primary,
-    letterSpacing: 0.3,
+  },
+  metaNotes: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: colors.textMuted,
   },
   priorityDot: {
     width: 6,
@@ -422,4 +483,4 @@ const styles = StyleSheet.create({
     color: colors.white,
     letterSpacing: 0.2,
   },
-});
+  });

@@ -1,24 +1,10 @@
 /**
- * Proverbs 31 — global design tokens.
- * These exact values must be used everywhere; no substitutions.
+ * Static design tokens. Use `useAppTheme()` for colors that change with themes.
  */
+import { DEFAULT_THEME_ID, getThemeById } from "./themes";
 
-export const colors = {
-  headerBg: "#3E2878",
-  primary: "#8B6FC0",
-  accent: "#F5F0FF",
-  appBg: "#FAF8FE",
-  card: "#FFFFFF",
-  surface: "#F0ECF8",
-  border: "#E2D8F4",
-  text: "#1E1340",
-  textMuted: "#7A6E96",
-  textHint: "#AEA4C4",
-  priorityHigh: "#C47B8A",
-  priorityMedium: "#8B6FC0",
-  priorityLow: "#7AA89E",
-  white: "#FFFFFF",
-} as const;
+/** Default palette — prefer `useAppTheme().colors` in components. */
+export const colors = getThemeById(DEFAULT_THEME_ID).colors;
 
 export const fonts = {
   display: "CormorantGaramond_300Light",

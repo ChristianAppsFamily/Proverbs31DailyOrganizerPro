@@ -7,35 +7,26 @@ import React, {
 } from "react";
 
 type AppReadyContextValue = {
-  /** Splash hidden, ATT finished, ads SDK initialized. */
-  adsReady: boolean;
-  setAdsReady: (ready: boolean) => void;
-  isPremium: boolean;
-  setIsPremium: (premium: boolean) => void;
+  /** Startup work finished; safe to show main UI. */
+  bootstrapReady: boolean;
+  setBootstrapReady: (ready: boolean) => void;
 };
 
 const AppReadyContext = createContext<AppReadyContextValue | null>(null);
 
 export function AppReadyProvider({ children }: { children: React.ReactNode }) {
-  const [adsReady, setAdsReady] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
+  const [bootstrapReady, setBootstrapReady] = useState(false);
 
-  const setAdsReadyStable = useCallback((ready: boolean) => {
-    setAdsReady(ready);
-  }, []);
-
-  const setIsPremiumStable = useCallback((premium: boolean) => {
-    setIsPremium(premium);
+  const setBootstrapReadyStable = useCallback((ready: boolean) => {
+    setBootstrapReady(ready);
   }, []);
 
   const value = useMemo(
     () => ({
-      adsReady,
-      setAdsReady: setAdsReadyStable,
-      isPremium,
-      setIsPremium: setIsPremiumStable,
+      bootstrapReady,
+      setBootstrapReady: setBootstrapReadyStable,
     }),
-    [adsReady, isPremium, setAdsReadyStable, setIsPremiumStable],
+    [bootstrapReady, setBootstrapReadyStable],
   );
 
   return (

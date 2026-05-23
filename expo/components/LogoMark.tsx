@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts } from "@/constants/theme";
+import { fonts } from "@/constants/theme";
+import { useAppTheme } from "@/contexts/ThemeContext";
 
 type Props = {
   size?: number;
@@ -8,6 +9,7 @@ type Props = {
 
 /** Circular "P" medallion used in the header and as a brand mark. */
 export function LogoMark({ size = 28 }: Props) {
+  const { colors } = useAppTheme();
   return (
     <View
       style={[
@@ -23,7 +25,7 @@ export function LogoMark({ size = 28 }: Props) {
       <Text
         style={[
           styles.letter,
-          { fontSize: size * 0.55, lineHeight: size * 0.7 },
+          { fontSize: size * 0.55, lineHeight: size * 0.7, color: colors.accent },
         ]}
       >
         P
@@ -39,7 +41,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   letter: {
-    color: colors.accent,
     fontFamily: fonts.displayItalicRegular,
     textAlign: "center",
     includeFontPadding: false,

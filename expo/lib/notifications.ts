@@ -1,5 +1,8 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import type { Task } from "@/types/models";
+import { defaultReminderDate } from "@/lib/reminderDefaults";
+import { isSabbathPauseActive } from "@/lib/sabbathPause";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -20,9 +23,6 @@ export async function getNotificationPermission(): Promise<NotificationPermissio
   return "undetermined";
 }
 
-/**
- * Prompt the user for notification permission (iOS/Android).
- */
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
   const existing = await Notifications.getPermissionsAsync();
   if (existing.status === "granted") {
@@ -52,24 +52,77 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   return "granted";
 }
 
-export async function scheduleTaskReminderSample(): Promise<void> {
-  const permission = await getNotificationPermission();
-  if (permission !== "granted") {
-    return;
+function resolveTriggerDate(task: Task): Date {
+  if (task.reminderAt) {
+    const scheduled = new Date(task.reminderAt);
+    if (scheduled.getTime() > Date.now()) {
+      return scheduled;
+    }
+  }
+  return defaultReminderDate();
+}
+
+export async function scheduleTaskReminder(task: Task): Promise<string | undefined> {
+  if (await isSabbathPauseActive()) {
+    return undefined;
   }
 
-  await Notifications.scheduleNotificationAsync({
+  const permission = await getNotificationPermission();
+  if (permission !== "granted" || !task.remindOnDay || task.done) {
+    return undefined;
+  }
+
+  const triggerDate = resolveTriggerDate(task);
+
+  return Notifications.scheduleNotificationAsync({
     content: {
-      title: "Proverbs 31",
-      body: "You have tasks coming up today.",
+      title: "Task reminder",
+      body: task.title,
+      data: { taskId: task.id, priority: task.priority },
       sound: true,
     },
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: 60 * 60 * 24,
-      repeats: true,
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: triggerDate,
     },
   });
+}
+
+export async function cancelTaskReminder(notificationId?: string): Promise<void> {
+  if (notificationId) {
+    await Notifications.cancelScheduledNotificationAsync(notificationId);
+  }
+}
+
+export async function applyTaskReminder(task: Task): Promise<Task> {
+  if (task.notificationId) {
+    await cancelTaskReminder(task.notificationId);
+  }
+
+  if (!task.remindOnDay || task.done) {
+    return { ...task, notificationId: undefined };
+  }
+
+  const notificationId = await scheduleTaskReminder(task);
+  return { ...task, notificationId };
+}
+
+export async function syncTaskReminders(tasks: Task[]): Promise<Task[]> {
+  if (await isSabbathPauseActive()) {
+    await cancelAllScheduledNotifications();
+    return tasks.map((t) => ({ ...t, notificationId: undefined }));
+  }
+
+  const permission = await getNotificationPermission();
+  if (permission !== "granted") {
+    return tasks;
+  }
+
+  const updated: Task[] = [];
+  for (const task of tasks) {
+    updated.push(await applyTaskReminder(task));
+  }
+  return updated;
 }
 
 export async function cancelAllScheduledNotifications(): Promise<void> {

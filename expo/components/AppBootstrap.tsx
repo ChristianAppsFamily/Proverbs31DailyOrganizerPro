@@ -1,21 +1,14 @@
 import React, { useEffect } from "react";
-import { Platform } from "react-native";
 import { useAppReady } from "@/contexts/AppReadyContext";
-import { requestAttIfNeeded } from "@/lib/att";
-import { initializeAds } from "@/lib/ads";
-import { getNotificationPermission, requestNotificationPermission } from "@/lib/notifications";
-import { initPurchases } from "@/lib/purchases";
 
 type Props = {
   fontsLoaded: boolean;
-  onSplashHidden: () => void;
+  onBootstrapComplete: () => void;
 };
 
-/**
- * Runs ATT immediately after splash, then initializes AdMob before any banner loads.
- */
-export function AppBootstrap({ fontsLoaded, onSplashHidden }: Props) {
-  const { setAdsReady } = useAppReady();
+/** Hides splash once fonts are ready. Notification permission runs on the Tasks home screen. */
+export function AppBootstrap({ fontsLoaded, onBootstrapComplete }: Props) {
+  const { setBootstrapReady } = useAppReady();
 
   useEffect(() => {
     if (!fontsLoaded) {
@@ -23,35 +16,19 @@ export function AppBootstrap({ fontsLoaded, onSplashHidden }: Props) {
     }
 
     let cancelled = false;
-
-    (async () => {
-      onSplashHidden();
-
-      if (Platform.OS === "ios") {
-        await requestAttIfNeeded();
-      }
-
+    const timer = setTimeout(() => {
       if (cancelled) {
         return;
       }
-
-      await initializeAds();
-      void initPurchases();
-
-      const notificationPermission = await getNotificationPermission();
-      if (notificationPermission === "undetermined") {
-        await requestNotificationPermission();
-      }
-
-      if (!cancelled) {
-        setAdsReady(true);
-      }
-    })();
+      setBootstrapReady(true);
+      onBootstrapComplete();
+    }, 150);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [fontsLoaded, onSplashHidden, setAdsReady]);
+  }, [fontsLoaded, onBootstrapComplete, setBootstrapReady]);
 
   return null;
 }

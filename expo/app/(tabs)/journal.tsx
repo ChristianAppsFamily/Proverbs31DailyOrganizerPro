@@ -1,32 +1,16 @@
-import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { BookOpen, Plus } from "lucide-react-native";
+import React, { useRef } from "react";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import Swipeable from "react-native-gesture-handler/Swipeable";
+import { BookOpen, Plus, Trash2 } from "lucide-react-native";
 import { ScreenShell } from "@/components/ScreenShell";
-import { colors, fonts, radius } from "@/constants/theme";
-
-type Entry = {
-  id: string;
-  date: string;
-  title: string;
-  preview: string;
-};
-
-const ENTRIES: Entry[] = [
-  {
-    id: "e1",
-    date: "MAY 19, 2026",
-    title: "Grateful for small mercies",
-    preview:
-      "Today I found peace in the quiet morning hours before everyone woke. The Lord's presence was so near...",
-  },
-  {
-    id: "e2",
-    date: "MAY 18, 2026",
-    title: "Reflections on patience",
-    preview:
-      "The children tested me today, but I remembered Proverbs 31 — she speaks with wisdom and faithful instruction...",
-  },
-];
+import { formatJournalDate } from "@/lib/dates";
+import { useAppStore } from "@/stores/appStore";
+import type { JournalEntry } from "@/types/models";
+import { fonts } from "@/constants/theme";
+import type { AppColors } from "@/constants/themes";
+import { useAppTheme } from "@/contexts/ThemeContext";
+import { useThemedStyles } from "@/hooks/useThemedStyles";
 
 const JOURNAL_VERSE = {
   text:
@@ -35,8 +19,13 @@ const JOURNAL_VERSE = {
 } as const;
 
 export default function JournalScreen() {
-  const entries = ENTRIES;
-  const hasEntries = entries.length > 0;
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+  const router = useRouter();
+  const entries = useAppStore((s) => s.journalEntries);
+  const deleteJournalEntry = useAppStore((s) => s.deleteJournalEntry);
+  const openSwipeRef = useRef<Swipeable | null>(null);
+  const openNew = () => router.push("/add-journal");
 
   return (
     <ScreenShell verse={JOURNAL_VERSE}>
@@ -47,62 +36,131 @@ export default function JournalScreen() {
             {entries.length} {entries.length === 1 ? "entry" : "entries"}
           </Text>
         </View>
-        <Pressable style={styles.addBtn} testID="add-entry-icon">
+        <Pressable style={styles.addBtn} testID="add-entry-icon" onPress={openNew}>
           <Plus color={colors.primary} size={16} strokeWidth={1.8} />
         </Pressable>
       </View>
 
-      {hasEntries ? (
+      {entries.length > 0 ? (
         <>
           <View style={styles.cardList}>
             {entries.map((entry) => (
-              <EntryCard key={entry.id} entry={entry} />
+              <JournalEntryRow
+                key={entry.id}
+                entry={entry}
+                onPress={() => router.push(`/add-journal?id=${entry.id}`)}
+                onDelete={() => deleteJournalEntry(entry.id)}
+                openSwipeRef={openSwipeRef}
+              />
             ))}
           </View>
 
-          <Pressable style={styles.cta} testID="new-entry">
+          <Pressable style={styles.cta} testID="new-entry" onPress={openNew}>
             <Plus color={colors.white} size={16} strokeWidth={2} />
             <Text style={styles.ctaLabel}>New entry</Text>
           </Pressable>
         </>
       ) : (
-        <EmptyState />
+        <EmptyState onAdd={openNew} />
       )}
     </ScreenShell>
   );
 }
 
-function EntryCard({ entry }: { entry: Entry }) {
+function JournalEntryRow({
+  entry,
+  onPress,
+  onDelete,
+  openSwipeRef,
+}: {
+  entry: JournalEntry;
+  onPress: () => void;
+  onDelete: () => void;
+  openSwipeRef: React.MutableRefObject<Swipeable | null>;
+}) {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+  const swipeRef = useRef<Swipeable>(null);
+  const preview =
+    entry.body.length > 120 ? `${entry.body.slice(0, 120)}…` : entry.body;
+
+  const confirmDelete = () => {
+    Alert.alert("Delete entry?", `"${entry.title}" will be removed.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          swipeRef.current?.close();
+          onDelete();
+        },
+      },
+    ]);
+  };
+
   return (
-    <View style={styles.card}>
-      <Text style={styles.entryDate}>{entry.date}</Text>
-      <Text style={styles.entryTitle}>{entry.title}</Text>
-      <Text style={styles.entryPreview} numberOfLines={2}>
-        {entry.preview}
-      </Text>
-    </View>
+    <Swipeable
+      ref={swipeRef}
+      renderRightActions={() => (
+        <Pressable
+          style={styles.deleteAction}
+          onPress={confirmDelete}
+          testID={`delete-journal-${entry.id}`}
+        >
+          <Trash2 color={colors.white} size={18} strokeWidth={2} />
+          <Text style={styles.deleteActionText}>Delete</Text>
+        </Pressable>
+      )}
+      overshootRight={false}
+      onSwipeableWillOpen={() => {
+        if (openSwipeRef.current && openSwipeRef.current !== swipeRef.current) {
+          openSwipeRef.current.close();
+        }
+        openSwipeRef.current = swipeRef.current;
+      }}
+      onSwipeableClose={() => {
+        if (openSwipeRef.current === swipeRef.current) {
+          openSwipeRef.current = null;
+        }
+      }}
+    >
+      <Pressable style={styles.card} onPress={onPress}>
+        <Text style={styles.entryDate}>{formatJournalDate(entry.createdAt)}</Text>
+        <Text style={styles.entryTitle}>{entry.title}</Text>
+        {preview ? (
+          <Text style={styles.entryPreview} numberOfLines={3}>
+            {preview}
+          </Text>
+        ) : null}
+      </Pressable>
+    </Swipeable>
   );
 }
 
-function EmptyState() {
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  const { colors } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.empty} testID="journal-empty">
       <BookOpen color={colors.border} size={42} strokeWidth={1.5} />
       <Text style={styles.emptyTitle}>No journal entries</Text>
       <Text style={styles.emptyHint}>Tap + to write your first entry</Text>
+      <Pressable style={styles.emptyBtn} onPress={onAdd}>
+        <Plus color={colors.white} size={14} />
+        <Text style={styles.emptyBtnText}>New entry</Text>
+      </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
   titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  titleLeft: {
-    gap: 2,
-  },
+  titleLeft: { gap: 2 },
   title: {
     fontFamily: fonts.display,
     fontSize: 22,
@@ -123,8 +181,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cardList: {
-    gap: 6,
+  cardList: { gap: 6 },
+  deleteAction: {
+    backgroundColor: colors.priorityHigh,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    borderRadius: 12,
+    marginLeft: 8,
+    gap: 4,
+  },
+  deleteActionText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: colors.white,
   },
   card: {
     backgroundColor: colors.card,
@@ -182,6 +252,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textHint,
   },
-});
-
-void radius;
+  emptyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 8,
+  },
+  emptyBtnText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: colors.white,
+  },
+  });
